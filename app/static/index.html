@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Revenue Manager Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root{
+      --bg:#f4f5f6; --surface:#ffffff; --line:#e3e6e8; --line-2:#eef0f1;
+      --ink:#16191c; --muted:#6b7177; --accent:#1b6b62; --accent-d:#155349;
+      --tool:#2563eb; --skill:#1b9e6e; --hold:#c2820a;
+      --font:"IBM Plex Sans", ui-sans-serif, -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+    }
+    *{box-sizing:border-box;}
+    html,body{height:100%; margin:0;}
+    body{background:var(--bg); color:var(--ink); font-family:var(--font); font-size:16px; line-height:1.55; -webkit-font-smoothing:antialiased;}
+    .app{display:flex; flex-direction:column; height:100vh; height:100dvh;}
+
+    header{background:var(--surface); border-bottom:1px solid var(--line); flex:none;}
+    .hd{padding:13px 34px; display:flex; align-items:center; gap:12px;}
+    .hd h1{font-size:17px; font-weight:600; margin:0; letter-spacing:-.01em;}
+    .hd p{font-size:13px; color:var(--muted); margin:2px 0 0;}
+    .hd .status{margin-left:auto; font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px; white-space:nowrap;}
+    .hd .status i{width:7px; height:7px; border-radius:50%; background:var(--skill); display:inline-block;}
+
+    .scroll{flex:1; overflow-y:auto; overscroll-behavior:contain;}
+    .wrap{max-width:1080px; margin:0 auto; padding:22px 34px 28px;}
+    /* keep prose to a readable measure; let tables use the width */
+    .answer p,.answer li,.answer h1,.answer h2,.answer h3,.answer blockquote{max-width:74ch;}
+
+    .turn{margin:0 0 26px;}
+    .u{display:flex; justify-content:flex-end; margin-bottom:14px;}
+    .u .b{background:#e8efee; color:var(--ink); padding:9px 13px; border-radius:13px 13px 3px 13px; max-width:70%; font-weight:500;}
+
+    .tags{display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:8px; min-height:2px;}
+    .tags .lead{font-size:12px; color:var(--muted); margin-right:1px;}
+    .chip{display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--ink); background:var(--surface);
+      border:1px solid var(--line); border-radius:999px; padding:3px 9px; animation:fade .25s ease both;}
+    .chip i{width:6px; height:6px; border-radius:50%; background:var(--tool);}
+    .chip.skill i{background:var(--skill);} .chip.hold i{background:var(--hold);} .chip.meta i{background:var(--muted);}
+
+    .working{color:var(--muted); font-size:15px;}
+    .working::after{content:"…"; display:inline-block; width:1em; text-align:left; overflow:hidden; vertical-align:bottom; animation:dots 1.4s steps(4,end) infinite; }
+
+    .answer{font-size:16px; color:var(--ink);}
+    .answer > :first-child{margin-top:0;} .answer > :last-child{margin-bottom:0;}
+    .answer p{margin:10px 0;}
+    .answer h1,.answer h2,.answer h3{font-size:16px; font-weight:600; margin:16px 0 7px;}
+    .answer strong{font-weight:600;}
+    .answer ul,.answer ol{margin:8px 0; padding-left:20px;} .answer li{margin:3px 0;}
+    .answer a{color:var(--accent);}
+    .answer code{background:var(--line-2); padding:1px 5px; border-radius:4px; font-size:.92em; font-family:ui-monospace,Menlo,monospace;}
+    .answer table{width:100%; border-collapse:collapse; margin:12px 0; font-size:14.5px; font-variant-numeric:tabular-nums; display:block; overflow-x:auto;}
+    .answer th,.answer td{padding:7px 12px 7px 0; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap;}
+    .answer th:first-child,.answer td:first-child{text-align:left; padding-left:0;}
+    .answer thead th{font-weight:600; font-size:12.5px; color:var(--muted); border-bottom:1.5px solid var(--ink);}
+    .answer tbody tr:last-child td{border-bottom:0;}
+
+    .hold{margin-top:10px; border:1px solid #e7d9b3; background:#fbf6e9; border-radius:10px; padding:13px 15px;
+      display:flex; gap:14px; align-items:center; flex-wrap:wrap;}
+    .hold .t{flex:1; min-width:200px; font-size:14.5px; color:#574412;}
+    .hold .t b{color:var(--ink);}
+    .hold button{all:unset; cursor:pointer; background:var(--accent); color:#fff; font-weight:500; font-size:14px;
+      padding:8px 16px; border-radius:8px;}
+    .hold button:hover{background:var(--accent-d);}
+
+    /* empty state */
+    .empty{padding:10px 0;}
+    .empty h2{font-size:17px; font-weight:600; margin:0 0 4px;}
+    .empty p{color:var(--muted); margin:0 0 14px; font-size:14.5px;}
+    .sugg{display:flex; flex-direction:column; gap:8px;}
+    .sugg button{all:unset; cursor:pointer; border:1px solid var(--line); background:var(--surface); border-radius:10px;
+      padding:11px 14px; font-size:15px; color:var(--ink); transition:border-color .15s, background .15s;}
+    .sugg button:hover{border-color:var(--accent); background:#fbfdfc;}
+
+    footer{flex:none; background:var(--surface); border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom);}
+    .compose{max-width:1080px; margin:0 auto; padding:13px 34px; display:flex; gap:10px; align-items:center;}
+    #q{flex:1; border:1px solid var(--line); border-radius:10px; padding:12px 14px; font-family:var(--font);
+      font-size:16px; color:var(--ink); background:#fafbfb; outline:none;}
+    #q:focus{border-color:var(--accent); background:#fff; box-shadow:0 0 0 3px #1b6b6222;}
+    #q:disabled{opacity:.6;}
+    .send{flex:none; border:0; background:var(--accent); color:#fff; font-family:var(--font); font-weight:500; font-size:15px;
+      padding:12px 20px; border-radius:10px; cursor:pointer;}
+    .send:hover{background:var(--accent-d);} .send[disabled]{opacity:.5; cursor:default;}
+    .note{max-width:1080px; margin:0 auto; padding:0 34px 11px; font-size:11.5px; color:var(--muted);}
+
+    @keyframes fade{from{opacity:0; transform:translateY(2px)} to{opacity:1; transform:none}}
+    @keyframes dots{0%{width:0} 100%{width:1.1em}}
+    @media (max-width:600px){
+      .hd{padding:13px 16px;} .hd p{display:none;}
+      .wrap{padding:14px 16px 22px;} .compose{padding:10px 14px;} .note{padding:0 16px 9px;}
+      .u .b{max-width:86%;}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header><div class="hd">
+      <div>
+        <h1>Revenue Manager Agent</h1>
+        <p>Answers from the live reservation book, showing the tools and skills it uses.</p>
+      </div>
+      <span class="status"><i></i> Live</span>
+    </div></header>
+
+    <div class="scroll" id="scroll"><div class="wrap" id="log">
+      <div class="empty" id="empty">
+        <h2>Ask a revenue-manager question</h2>
+        <p>For example:</p>
+        <div class="sugg" id="sugg">
+          <button>What revenue is on the books, by month?</button>
+          <button>Are we too dependent on OTA in August?</button>
+          <button>How much group business do we hold, and is it concentrated?</button>
+          <button>What changed in the last 30 days for future stays?</button>
+          <button>Rebuild the August book as of 1 May and compare to now.</button>
+        </div>
+      </div>
+    </div></div>
+
+    <footer>
+      <form class="compose" id="form">
+        <input id="q" type="text" autocomplete="off" placeholder="Ask a revenue question…" />
+        <button type="submit" class="send" id="send">Send</button>
+      </form>
+      <div class="note">Tool and skill calls stream live. Point-in-time rebuilds pause for your approval.</div>
+    </footer>
+  </div>
+
+  <script>
+    const scroller = document.getElementById('scroll');
+    const log = document.getElementById('log');
+    const empty = document.getElementById('empty');
+    const qEl = document.getElementById('q');
+    const sendBtn = document.getElementById('send');
+    const threadId = 'web-' + Math.random().toString(36).slice(2);
+    if (window.marked) marked.setOptions({ gfm: true, breaks: false });
+    const renderMd = (t) => (window.marked ? marked.parse(t) : null);
+
+    const nearBottom = () => scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 160;
+    const keepDown = (force) => { if (force || nearBottom()) scroller.scrollTop = scroller.scrollHeight; };
+
+    function newTurn(question){
+      if (empty && empty.parentNode) empty.remove();
+      const turn = document.createElement('div'); turn.className = 'turn';
+      const u = document.createElement('div'); u.className = 'u';
+      const ub = document.createElement('div'); ub.className = 'b'; ub.textContent = question; u.appendChild(ub);
+      const tags = document.createElement('div'); tags.className = 'tags';
+      const ans = document.createElement('div'); ans.className = 'answer';
+      turn.append(u, tags, ans); log.appendChild(turn); keepDown(true);
+      return { tags, ans };
+    }
+
+    async function stream(payload, ctx){
+      const composing = document.createElement('div'); composing.className = 'working'; composing.textContent = 'Working';
+      ctx.ans.replaceWith(composing);
+      let mounted = composing, raw = '', pending = false;
+      const seen = new Set();
+      const chip = (cls, label) => {
+        if (seen.has(cls+label)) return; seen.add(cls+label);
+        if (!ctx.tags.querySelector('.lead')) ctx.tags.insertAdjacentHTML('afterbegin', '<span class="lead">Used</span>');
+        const s = document.createElement('span'); s.className = 'chip ' + cls;
+        s.innerHTML = '<i></i>'; s.append(label); ctx.tags.appendChild(s); keepDown();
+      };
+      const show = () => { if (mounted !== ctx.ans){ mounted.replaceWith(ctx.ans); mounted = ctx.ans; } };
+      const draw = () => { const h = renderMd(raw); if (h !== null) ctx.ans.innerHTML = h; else ctx.ans.textContent = raw; };
+
+      try {
+        const res = await fetch('/chat', { method:'POST', headers:{ 'Content-Type':'application/json' },
+          body: JSON.stringify({ ...payload, thread_id: threadId }) });
+        const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = '';
+        while (true){
+          const { value, done } = await reader.read(); if (done) break;
+          buf += dec.decode(value, { stream:true });
+          const parts = buf.split('\n\n'); buf = parts.pop();
+          for (const part of parts){
+            const line = part.replace(/^data: /, '').trim();
+            if (!line || line === '[DONE]') continue;
+            let ev; try { ev = JSON.parse(line); } catch { continue; }
+            if (ev.type === 'tool') chip('', ev.name);
+            else if (ev.type === 'skill') chip('skill', ev.name + ' skill');
+            else if (ev.type === 'write_todos') chip('meta', 'planning');
+            else if (ev.type === 'task') chip('meta', 'segment analyst');
+            else if (ev.type === 'interrupt') { chip('hold', 'approval needed'); pending = true; }
+            else if (ev.type === 'token') { show(); raw += ev.text; draw(); keepDown(); }
+            else if (ev.type === 'final') { if (!raw && ev.content) { show(); raw = ev.content; draw(); } }
+          }
+        }
+      } catch (err){ show(); ctx.ans.textContent = 'Something went wrong: ' + err.message; }
+      if (mounted !== ctx.ans) mounted.replaceWith(ctx.ans);
+      keepDown();
+      return pending;
+    }
+
+    function showApproval(ctx){
+      const card = document.createElement('div'); card.className = 'hold';
+      card.innerHTML = '<div class="t"><b>Approval needed.</b> This runs a point-in-time rebuild (<code>get_as_of_otb</code>) — the heaviest query. Run it?</div>';
+      const go = document.createElement('button'); go.textContent = 'Approve'; card.appendChild(go);
+      ctx.ans.appendChild(card); keepDown(true);
+      go.addEventListener('click', async () => {
+        card.remove(); setBusy(true);
+        if (await stream({ approve: true }, ctx)) showApproval(ctx);
+        setBusy(false);
+      }, { once:true });
+    }
+
+    async function ask(question){
+      setBusy(true);
+      const ctx = newTurn(question);
+      if (await stream({ message: question }, ctx)) showApproval(ctx);
+      setBusy(false);
+    }
+
+    function setBusy(b){ sendBtn.disabled = b; qEl.disabled = b; if (!b) qEl.focus(); }
+
+    document.getElementById('form').addEventListener('submit', (e) => {
+      e.preventDefault(); const q = qEl.value.trim(); if (!q) return; qEl.value = ''; ask(q);
+    });
+    document.getElementById('sugg').addEventListener('click', (e) => {
+      const b = e.target.closest('button'); if (!b || qEl.disabled) return; ask(b.textContent);
+    });
+  </script>
+</body>
+</html>

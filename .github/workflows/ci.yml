@@ -23,10 +23,10 @@ jobs:
     env:
       DATABASE_URL: postgresql://hackathon:hackathon@localhost:5432/hotel_hackathon
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v8.1.0
         with:
           python-version: "3.12"
 

@@ -1,15 +1,18 @@
 """Pytest fixtures: a loaded Postgres fixture DB and the skill-pack on disk.
 
 The ``db`` fixture (session-scoped) applies the schema + semantic views and loads
-the deterministic synthetic dataset from ``fixture_data.py`` into the database
-pointed at by ``DATABASE_URL`` (default: the local cluster / docker-compose DB).
-DB-backed tests depend on ``db``; structural skill/agent tests do not touch it.
+the deterministic synthetic dataset from ``fixture_data.py``. It always runs
+against an isolated **test** database (``TEST_DATABASE_URL`` if set, otherwise the
+working ``DATABASE_URL`` with its db name suffixed ``_test``), created on demand,
+so running the suite never truncates the developer's real local load. DB-backed
+tests depend on ``db``; structural skill/agent tests do not touch it.
 """
 
 from __future__ import annotations
 
 import os
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 import psycopg
 import pytest
@@ -31,6 +34,51 @@ def _database_url() -> str:
     return os.environ.get(
         "DATABASE_URL", "postgresql://hackathon:hackathon@localhost:5432/hotel_hackathon"
     )
+
+
+# Captured at import, before the ``db`` fixture repoints DATABASE_URL at the
+# ``*_test`` database, so the real-load reconciliation test can still reach the
+# developer's working database.
+_WORKING_DATABASE_URL = _database_url()
+
+
+def _test_database_url() -> str:
+    """Return an isolated test connection string, never the working dev database.
+
+    Prefers an explicit ``TEST_DATABASE_URL``; otherwise derives one from the
+    working ``DATABASE_URL`` by suffixing its database name with ``_test`` (idempotent).
+    """
+    explicit = os.environ.get("TEST_DATABASE_URL")
+    if explicit:
+        return explicit
+    parts = urlsplit(_database_url())
+    name = parts.path.lstrip("/")
+    if not name.endswith("_test"):
+        name = f"{name}_test"
+    return urlunsplit((parts.scheme, parts.netloc, f"/{name}", parts.query, parts.fragment))
+
+
+def _ensure_database(url: str) -> None:
+    """Create the target database if it does not already exist.
+
+    Connects to the ``postgres`` maintenance database on the same host/credentials
+    (``create database`` cannot run inside a transaction, hence autocommit). Raises
+    a clear hint if the role lacks ``CREATEDB`` rather than failing opaquely.
+    """
+    parts = urlsplit(url)
+    dbname = parts.path.lstrip("/")
+    admin = urlunsplit((parts.scheme, parts.netloc, "/postgres", "", ""))
+    with psycopg.connect(admin, autocommit=True) as conn, conn.cursor() as cur:
+        cur.execute("select 1 from pg_database where datname = %s", (dbname,))
+        if cur.fetchone() is not None:
+            return
+        try:
+            cur.execute(f'create database "{dbname}"')
+        except psycopg.errors.InsufficientPrivilege as exc:
+            raise RuntimeError(
+                f"cannot create test database {dbname!r}: the role lacks CREATEDB. "
+                f"Create it once (createdb {dbname}) or set TEST_DATABASE_URL."
+            ) from exc
 
 
 def _load(conn: psycopg.Connection) -> None:
@@ -95,9 +143,14 @@ def _load(conn: psycopg.Connection) -> None:
 
 @pytest.fixture(scope="session")
 def db():
-    """Apply schema + views and load the synthetic fixture; yield the DATABASE_URL."""
-    url = _database_url()
-    os.environ.setdefault("DATABASE_URL", url)
+    """Apply schema + views and load the synthetic fixture into the isolated test DB.
+
+    Points ``DATABASE_URL`` at the test database for the session so tools under test
+    (which read ``DATABASE_URL``) hit the same isolated database the fixture loads.
+    """
+    url = _test_database_url()
+    _ensure_database(url)
+    os.environ["DATABASE_URL"] = url
     schema_sql = _find_schema().read_text(encoding="utf-8")
     overrides_sql = (SOLUTION_ROOT / "sql" / "schema_overrides.sql").read_text(encoding="utf-8")
     views_sql = (SOLUTION_ROOT / "sql" / "views.sql").read_text(encoding="utf-8")
@@ -109,6 +162,16 @@ def db():
         conn.commit()
         _load(conn)
     return url
+
+
+@pytest.fixture(scope="session")
+def real_db_url() -> str:
+    """The working (non-test) database URL, captured before any test-DB redirect.
+
+    Used by the real-load reconciliation test, which must reach the developer's
+    actual load rather than the synthetic ``*_test`` fixture database.
+    """
+    return _WORKING_DATABASE_URL
 
 
 @pytest.fixture(scope="session")

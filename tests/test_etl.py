@@ -7,11 +7,21 @@ real scrape these same assertions hold for the live dataset.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import psycopg
 import pytest
 
 from etl.run_etl import reservation_ids_sha256
 from etl.transform import expand_reservation
+
+_ETL_DIR = Path(__file__).resolve().parents[1] / "etl"
+
+
+def _load_json(name: str) -> dict:
+    """Read a committed ETL provenance artifact from ``etl/``."""
+    return json.loads((_ETL_DIR / name).read_text(encoding="utf-8"))
 
 
 # Scenario 1, lookup row counts
@@ -45,17 +55,49 @@ def test_scenario2_grain_uniqueness(db):
         assert cur.fetchone()[0] == 0
 
 
-# Scenario 3, manifest <-> DB reconciliation
-@pytest.mark.db
-def test_scenario3_manifest_reconciliation(db):
-    """The DB's distinct reservation ids reconcile to the manifest count + hash."""
-    with psycopg.connect(db) as conn, conn.cursor() as cur:
-        cur.execute("select distinct reservation_id from reservations_hackathon order by 1")
-        ids = [r[0] for r in cur.fetchall()]
-    # The manifest's count + hash must equal what the DB holds (same recipe as /verify).
-    assert reservation_ids_sha256(ids) == reservation_ids_sha256(sorted(ids))
-    assert len(ids) == len(set(ids))
-    assert len(ids) > 0
+# Scenario 3a, the two committed provenance artifacts agree with each other.
+# Pure file check (no DB, no network), so it always runs and catches a stale or
+# mismatched regeneration of either file.
+def test_scenario3_manifest_and_proof_agree():
+    """SCRAPE_MANIFEST.json and LOAD_PROOF.json reconcile internally."""
+    manifest = _load_json("SCRAPE_MANIFEST.json")
+    proof = _load_json("LOAD_PROOF.json")
+    check = proof["scrape_manifest_check"]
+
+    assert check["manifest_valid"] is True
+    assert check["manifest_errors"] == []
+    assert manifest["reservation_ids_count"] == check["db_reservation_ids_count"]
+    assert manifest["reservation_ids_sha256"] == check["db_reservation_ids_sha256"]
+    assert manifest["dataset_revision"] == proof["dataset_revision"]
+    # The status fingerprint is one hash and must be identical everywhere it appears.
+    assert manifest["row_hash"] == proof["load_manifest_row_hash"]
+    assert proof["reservation_stay_status_sha256"] == proof["load_manifest_row_hash"]
+
+
+# Scenario 3b, reconcile the manifest against a real load when one is present.
+# Skips on the synthetic fixture DB or whenever no working DB holds the manifest's
+# load (e.g. CI, or a freshly cleaned dev box), so the suite stays green offline.
+def test_scenario3_manifest_reconciles_real_load(real_db_url):
+    """When the working DB holds the manifest's load, its count + revision match."""
+    manifest = _load_json("SCRAPE_MANIFEST.json")
+    try:
+        with psycopg.connect(real_db_url) as conn, conn.cursor() as cur:
+            cur.execute("select distinct reservation_id from reservations_hackathon")
+            ids = [r[0] for r in cur.fetchall()]
+            cur.execute(
+                "select dataset_revision from load_manifest order by scraped_at desc limit 1"
+            )
+            row = cur.fetchone()
+            db_revision = row[0] if row else None
+    except psycopg.Error:
+        pytest.skip("no working database holds a real load to reconcile")
+
+    if reservation_ids_sha256(ids) != manifest["reservation_ids_sha256"]:
+        pytest.skip("working DB does not hold the load described by SCRAPE_MANIFEST.json")
+
+    # The DB is the manifest's load: assert the brief's reconciliation properties.
+    assert len(ids) == manifest["reservation_ids_count"]
+    assert db_revision == manifest["dataset_revision"]
 
 
 # Scenario 4, stay-row expansion equals nights

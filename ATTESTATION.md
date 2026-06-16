@@ -1,9 +1,9 @@
-# ATTESTATION.md (Phase 0)
+# ATTESTATION.md
 
 ## Candidate
 
-- Name: _<your name>_
-- Repository URL: _<your solution repo URL>_
+- Name: Satvik Kumar
+- Repository URL: https://github.com/21satvik/Otel-revenue-agent
 - Date: 2026-06-15
 
 ---

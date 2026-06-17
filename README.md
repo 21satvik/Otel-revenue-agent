@@ -24,6 +24,7 @@ routing matrix, and [ATTESTATION.md](ATTESTATION.md) for the Phase 0 comprehensi
 | `tools/` | `metrics.py` (the 5 tools) · `db.py` (read-only access) · `METRIC_DEFINITIONS.md` |
 | `skills/` | 8 `SKILL.md` skills + `CHALLENGE_SKILL.md` (pack `otel-rm-v2`) |
 | `agent/` | `build.py` (`create_deep_agent` wiring) · `subagents.py` · `prompt.py` |
+| `mcp_server/` | publishes the 5 tools over MCP (bonus); the deployed agent consumes them over the protocol |
 | `app/` | `server.py` (FastAPI) · `static/index.html` (chat UI) |
 | `tests/` | `test_etl.py` · `test_tools.py` · `test_skills.py` · `test_agent.py` + synthetic fixture |
 
@@ -71,6 +72,39 @@ the load from steps 2-3:
   load when one is present, and skips when it is not.
 - `test_skills.py` / `test_agent.py`, structural / graph-introspection with a fake
   injected model. No LLM API calls.
+
+## MCP (bonus)
+The same five tools are also published as a standalone **MCP server** so any MCP client
+can reuse them, and the deployed agent consumes them over the protocol (see
+[ARCHITECTURE.md](ARCHITECTURE.md) §9). One definition of each tool: the server is
+generated from `tools.metrics.ALL_TOOLS`, so grain, filters, and the read-only guardrail
+are inherited and no SQL is exposed.
+
+```bash
+# Run the server for a local client (Claude Desktop): stdio transport
+uv run python -m mcp_server --transport stdio
+
+# Or as a network service (production): streamable-HTTP on 127.0.0.1:9000/mcp
+uv run python -m mcp_server --transport streamable-http
+```
+
+Claude Desktop (`claude_desktop_config.json`), pointing at the local server:
+
+```json
+{
+  "mcpServers": {
+    "otel-revenue-rm": {
+      "command": "uv",
+      "args": ["run", "python", "-m", "mcp_server", "--transport", "stdio"],
+      "env": { "DATABASE_URL": "postgresql://hackathon:hackathon@localhost:5432/hotel_hackathon" }
+    }
+  }
+}
+```
+
+The agent uses in-process tools by default (so tests and local runs need no server). The
+deployment opts into MCP with `RM_TOOL_TRANSPORT=mcp` (and `MCP_SERVER_URL=...` for the
+streamable-HTTP server); only the MCP server then holds `DATABASE_URL`.
 
 ## Deployment
 A single FastAPI service (uvicorn) behind nginx with HTTPS and HTTP basic auth, reading

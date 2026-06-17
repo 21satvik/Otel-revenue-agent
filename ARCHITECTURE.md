@@ -63,6 +63,7 @@ model-improvised SQL. Grain definitions: `tools/METRIC_DEFINITIONS.md`.
 | Memory / filesystem | `InMemorySaver` checkpointer + `InMemoryStore` (multi-turn) + virtual filesystem |
 | Human-in-the-loop | `interrupt_on={"get_as_of_otb": True}` (checkpointer required) |
 | Model & prompt | Claude via `MODEL_ID` (default `anthropic:claude-sonnet-4-6`); RM persona, §12 answer style |
+| MCP (bonus) | the same five tools are also published as an MCP server (`mcp_server`); the deployed agent consumes them over MCP (§9) |
 
 ## 5. Skill → tool routing matrix
 
@@ -109,3 +110,27 @@ cold-starts during the review window.
   trade-off is owning the nginx/systemd/TLS setup directly.
 - No daily cron: the dataset is anchor-stable within a day, so the ETL is run-on-demand
   and reproducible for a given anchor date.
+
+## 9. MCP server (bonus)
+The five tools are also published as a standalone **MCP server** (`mcp_server/`), and the
+deployed agent can consume them over the Model Context Protocol instead of in-process.
+Properties:
+- **Reuse:** any MCP client (e.g. Claude Desktop) can call the tools as a separate service.
+- **Credential isolation:** in the MCP deployment only the server reads `DATABASE_URL`; the
+  agent process receives results over the protocol.
+
+The server is generated from `tools.metrics.ALL_TOOLS` via `langchain_mcp_adapters.to_fastmcp`,
+so each metric has one definition (in `tools/metrics.py`); grain, default filters, and the
+read-only transaction guardrail (`tools/db.py`) are inherited. Tool names are preserved
+across the protocol, so the `get_as_of_otb` HITL gate and the five-tool surface are
+unchanged. `mcp_server` serves `stdio` (local clients) or `streamable-http`
+(remote/production), selected by `--transport` / `MCP_TRANSPORT`.
+
+`build_agent()` defaults to the in-process tools, so the structural tests run without a
+server or API key. The deployment sets `RM_TOOL_TRANSPORT=mcp` (and `MCP_SERVER_URL` for
+streamable-http); `load_rm_tools_over_mcp()` loads the five tools and verifies the server's
+surface is exactly the required names before wiring them. `tests/test_mcp.py` checks the
+round-trip over an in-memory transport: the catalog is exactly the five, and a tool called
+over MCP returns the same result as the in-process tool. On the VM the server runs as its
+own `systemd` unit (`otel-mcp.service`, streamable-http on `127.0.0.1`) and the agent
+service connects to it.

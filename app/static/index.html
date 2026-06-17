@@ -38,10 +38,32 @@
 
     .tags{display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:8px; min-height:2px;}
     .tags .lead{font-size:12px; color:var(--muted); margin-right:1px;}
-    .chip{display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--ink); background:var(--surface);
-      border:1px solid var(--line); border-radius:999px; padding:3px 9px; animation:fade .25s ease both;}
-    .chip i{width:6px; height:6px; border-radius:50%; background:var(--tool);}
-    .chip.skill i{background:var(--skill);} .chip.hold i{background:var(--hold);} .chip.meta i{background:var(--muted);}
+    .chip{display:inline-flex; align-items:center; gap:6px; font-size:12.5px; line-height:1.35; color:var(--ink);
+      background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:4px 11px; animation:fade .25s ease both;}
+    .chip i{width:7px; height:7px; border-radius:50%; background:var(--muted); flex:none;}
+    /* tint per type so tool vs skill read instantly, not just by the dot colour */
+    .chip.tool{cursor:pointer; user-select:none; background:#eef2fd; border-color:#d6e1fb;
+      font-family:ui-monospace,Menlo,monospace; font-size:12px;}
+    .chip.tool i{background:var(--tool);}
+    .chip.tool:hover,.chip.tool.open{border-color:var(--tool);}
+    .chip.skill{background:#eaf5ef; border-color:#cfe9de;}
+    .chip.skill i{background:var(--skill);}
+    .chip.meta{background:#f1f2f4; border-color:var(--line);}
+    .chip.hold{background:#fbf3e0; border-color:#ecdcae;}
+    .chip.hold i{background:var(--hold);}
+    .chip .cx{color:var(--muted); font-size:11px; font-weight:700; margin-left:1px; line-height:1;}
+    .chip.tool.open .cx{color:var(--tool);}
+    .chip .ms{color:var(--muted); font-size:11px; font-weight:400; margin-left:1px;}
+
+    .details{display:flex; flex-direction:column; gap:7px;}
+    .details:not(:empty){margin-bottom:11px;}
+    .toolcard{border:1px solid var(--line); border-radius:9px; background:#fbfcfc; padding:9px 12px 11px;
+      animation:fade .2s ease both;}
+    .toolcard .tc-h{font-family:ui-monospace,Menlo,monospace; font-size:12px; font-weight:600; color:var(--ink); margin-bottom:2px;}
+    .toolcard .tc-k{font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:8px 0 3px;}
+    .toolcard pre{margin:0; font-family:ui-monospace,Menlo,monospace; font-size:12px; line-height:1.5; color:#1f2a28;
+      background:#fff; border:1px solid var(--line-2); border-radius:6px; padding:7px 9px; overflow-x:auto;
+      white-space:pre-wrap; word-break:break-word;}
 
     .working{color:var(--muted); font-size:15px;}
     .working::after{content:"…"; display:inline-block; width:1em; text-align:left; overflow:hidden; vertical-align:bottom; animation:dots 1.4s steps(4,end) infinite; }
@@ -55,17 +77,22 @@
     .answer a{color:var(--accent);}
     .answer code{background:var(--line-2); padding:1px 5px; border-radius:4px; font-size:.92em; font-family:ui-monospace,Menlo,monospace;}
     .answer table{width:100%; border-collapse:collapse; margin:12px 0; font-size:14.5px; font-variant-numeric:tabular-nums; display:block; overflow-x:auto;}
-    .answer th,.answer td{padding:7px 12px 7px 0; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap;}
+    /* wrap cell text so prose tables (Issue / Action) fit; numbers have no spaces so stay on one line */
+    .answer th,.answer td{padding:7px 12px 7px 0; text-align:right; border-bottom:1px solid var(--line);
+      white-space:normal; vertical-align:top;}
+    .answer td{font-variant-numeric:tabular-nums;}
     .answer th:first-child,.answer td:first-child{text-align:left; padding-left:0;}
     .answer thead th{font-weight:600; font-size:12.5px; color:var(--muted); border-bottom:1.5px solid var(--ink);}
     .answer tbody tr:last-child td{border-bottom:0;}
+    .answer hr{border:0; border-top:1px solid var(--line); margin:14px 0;}
+    .answer > hr:first-child,.answer > hr:last-child{display:none;}
 
-    .hold{margin-top:10px; border:1px solid #e7d9b3; background:#fbf6e9; border-radius:10px; padding:13px 15px;
-      display:flex; gap:14px; align-items:center; flex-wrap:wrap;}
-    .hold .t{flex:1; min-width:200px; font-size:14.5px; color:#574412;}
+    .hold{margin-top:9px; border:1px solid #ecdcae; background:#fbf6e9; border-radius:9px; padding:10px 12px;
+      display:flex; gap:12px; align-items:center; flex-wrap:wrap;}
+    .hold .t{flex:1; min-width:200px; font-size:13px; color:#574412;}
     .hold .t b{color:var(--ink);}
-    .hold button{all:unset; cursor:pointer; background:var(--accent); color:#fff; font-weight:500; font-size:14px;
-      padding:8px 16px; border-radius:8px;}
+    .hold button{all:unset; cursor:pointer; background:var(--accent); color:#fff; font-weight:500; font-size:13px;
+      padding:6px 13px; border-radius:7px;}
     .hold button:hover{background:var(--accent-d);}
 
     /* empty state */
@@ -112,10 +139,10 @@
         <h2>Ask a revenue-manager question</h2>
         <p>For example:</p>
         <div class="sugg" id="sugg">
-          <button>What revenue is on the books, by month?</button>
+          <button>Give me this morning's revenue briefing.</button>
+          <button>What's driving July, and how did we book in the last 7 days?</button>
           <button>Are we too dependent on OTA in August?</button>
           <button>How much group business do we hold, and is it concentrated?</button>
-          <button>What changed in the last 30 days for future stays?</button>
           <button>Rebuild the August book as of 1 May and compare to now.</button>
         </div>
       </div>
@@ -126,7 +153,7 @@
         <input id="q" type="text" autocomplete="off" placeholder="Ask a revenue question…" />
         <button type="submit" class="send" id="send">Send</button>
       </form>
-      <div class="note">Tool and skill calls stream live. Point-in-time rebuilds pause for your approval.</div>
+      <div class="note">Tool and skill calls stream live; click a tool to see its inputs and result. Point-in-time rebuilds pause for your approval.</div>
     </footer>
   </div>
 
@@ -149,9 +176,10 @@
       const u = document.createElement('div'); u.className = 'u';
       const ub = document.createElement('div'); ub.className = 'b'; ub.textContent = question; u.appendChild(ub);
       const tags = document.createElement('div'); tags.className = 'tags';
+      const details = document.createElement('div'); details.className = 'details';
       const ans = document.createElement('div'); ans.className = 'answer';
-      turn.append(u, tags, ans); log.appendChild(turn); keepDown(true);
-      return { tags, ans };
+      turn.append(u, tags, details, ans); log.appendChild(turn); keepDown(true);
+      return { tags, details, ans, tools: {} };
     }
 
     async function stream(payload, ctx){
@@ -165,6 +193,38 @@
         const s = document.createElement('span'); s.className = 'chip ' + cls;
         s.innerHTML = '<i></i>'; s.append(label); ctx.tags.appendChild(s); keepDown();
       };
+      const fmt = (v) => { try { return JSON.stringify(v, null, 2); } catch { return String(v); } };
+      function toolChip(ev){
+        if (!ctx.tags.querySelector('.lead')) ctx.tags.insertAdjacentHTML('afterbegin', '<span class="lead">Used</span>');
+        const s = document.createElement('span'); s.className = 'chip tool';
+        const ms = document.createElement('b'); ms.className = 'ms';
+        const cx = document.createElement('b'); cx.className = 'cx'; cx.textContent = '▸';
+        s.innerHTML = '<i></i>'; s.append(ev.name, ms, cx); ctx.tags.appendChild(s);
+        ctx.tools[ev.id] = { name: ev.name, input: ev.input, output: undefined, chip: s, cx, msEl: ms };
+        s.addEventListener('click', () => toggleTool(ev.id));
+        keepDown();
+      }
+      function closeTool(t){
+        if (t.card) t.card.style.display = 'none';
+        t.chip.classList.remove('open'); t.cx.textContent = '▸';
+      }
+      function toggleTool(id){
+        const t = ctx.tools[id]; if (!t) return;
+        const isOpen = t.card && t.card.style.display !== 'none';
+        // accordion within this chat block: opening one closes any other that is open
+        for (const oid in ctx.tools) if (oid !== id) closeTool(ctx.tools[oid]);
+        if (isOpen){ closeTool(t); return; }
+        if (!t.card){
+          const card = document.createElement('div'); card.className = 'toolcard';
+          const h = document.createElement('div'); h.className = 'tc-h'; h.textContent = t.name; card.appendChild(h);
+          const ik = document.createElement('div'); ik.className = 'tc-k'; ik.textContent = 'Input'; card.appendChild(ik);
+          const ip = document.createElement('pre'); ip.textContent = fmt(t.input); card.appendChild(ip);
+          const rk = document.createElement('div'); rk.className = 'tc-k'; rk.textContent = 'Result'; card.appendChild(rk);
+          const rp = document.createElement('pre'); rp.textContent = t.output === undefined ? 'running…' : fmt(t.output); card.appendChild(rp);
+          t.card = card; t.outEl = rp; ctx.details.appendChild(card);
+        } else { t.card.style.display = 'block'; }
+        t.chip.classList.add('open'); t.cx.textContent = '▾'; keepDown();
+      }
       const show = () => { if (mounted !== ctx.ans){ mounted.replaceWith(ctx.ans); mounted = ctx.ans; } };
       const draw = () => { const h = renderMd(raw); if (h !== null) ctx.ans.innerHTML = h; else ctx.ans.textContent = raw; };
 
@@ -180,11 +240,13 @@
             const line = part.replace(/^data: /, '').trim();
             if (!line || line === '[DONE]') continue;
             let ev; try { ev = JSON.parse(line); } catch { continue; }
-            if (ev.type === 'tool') chip('', ev.name);
+            if (ev.type === 'tool') { if (ev.id) toolChip(ev); else chip('', ev.name); }
+            else if (ev.type === 'tool_result') { const t = ctx.tools[ev.id]; if (t) { t.output = ev.output; if (t.outEl) t.outEl.textContent = fmt(t.output); if (ev.ms != null && t.msEl) t.msEl.textContent = ' · ' + ev.ms + 'ms'; } }
             else if (ev.type === 'skill') chip('skill', ev.name + ' skill');
             else if (ev.type === 'write_todos') chip('meta', 'planning');
             else if (ev.type === 'task') chip('meta', 'segment analyst');
             else if (ev.type === 'interrupt') { chip('hold', 'approval needed'); pending = true; }
+            else if (ev.type === 'reset') { raw = ''; ctx.ans.innerHTML = ''; if (mounted === ctx.ans) { ctx.ans.replaceWith(composing); mounted = composing; } }
             else if (ev.type === 'token') { show(); raw += ev.text; draw(); keepDown(); }
             else if (ev.type === 'final') { if (!raw && ev.content) { show(); raw = ev.content; draw(); } }
           }

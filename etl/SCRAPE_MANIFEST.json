@@ -1,8 +1,8 @@
 {
-  "anchor_date": "2026-06-15",
+  "anchor_date": "2026-06-17",
   "pages_scraped": 3,
   "reservation_ids_count": 254,
   "reservation_ids_sha256": "aea16e722cb664db652aafc238066566537dc2f9013d2b51b14dd5d22272e85c",
-  "row_hash": "e98695ff7148e8579b26ed482597c2e06d59d724056a4dcb8b2a23823819ebb8",
+  "row_hash": "e6b0c1e3edcc6240203c6aec3af20240550bf1a5db60057683d2008bb7c85807",
   "dataset_revision": "2026.06.12.2"
 }

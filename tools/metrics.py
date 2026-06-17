@@ -252,6 +252,10 @@ def get_pickup_delta(booking_window_days: int, future_stay_from: str) -> dict:
     Grain: ``new_reservations`` = distinct reservations created in the window;
     ``new_room_nights`` = room nights; ``new_total_revenue`` = total revenue.
 
+    Each ``by_segment`` row also carries ``share_of_room_nights`` and
+    ``share_of_revenue`` (its fraction of the window totals), so consumers report
+    shares rather than deriving them.
+
     Args:
       booking_window_days: size of the trailing booking window, in days.
       future_stay_from: ISO date; only ``stay_date >= future_stay_from`` counts.
@@ -293,6 +297,10 @@ def get_pickup_delta(booking_window_days: int, future_stay_from: str) -> dict:
         """,
         params,
     )
+    # Denominators for the segment shares: the full window totals, so each segment's
+    # share is its fraction of all pickup (the top-5 cap means shares need not sum to 1).
+    pickup_room_nights = _i(totals.get("new_room_nights"))
+    pickup_total_revenue = _f(totals.get("new_total_revenue"))
     return {
         "booking_window_days": booking_window_days,
         "future_stay_from": future_stay_from,
@@ -318,6 +326,12 @@ def get_pickup_delta(booking_window_days: int, future_stay_from: str) -> dict:
                 "total_revenue": _f(r["total_revenue"]),
                 "adr": _adr(_f(r["room_revenue"]), _i(r["room_nights"])),
                 "reservations": _i(r["reservations"]),
+                "share_of_room_nights": (
+                    _i(r["room_nights"]) / pickup_room_nights if pickup_room_nights else 0.0
+                ),
+                "share_of_revenue": (
+                    _f(r["total_revenue"]) / pickup_total_revenue if pickup_total_revenue else 0.0
+                ),
             }
             for r in by_segment
         ],

@@ -83,25 +83,11 @@ generated from `tools.metrics.ALL_TOOLS`, so grain, filters, and the read-only g
 are inherited and no SQL is exposed.
 
 ```bash
-# Run the server for a local client (Claude Desktop): stdio transport
+# Local clients (stdio transport)
 uv run python -m mcp_server --transport stdio
 
 # Or as a network service (production): streamable-HTTP on 127.0.0.1:9000/mcp
 uv run python -m mcp_server --transport streamable-http
-```
-
-Claude Desktop (`claude_desktop_config.json`), pointing at the local server:
-
-```json
-{
-  "mcpServers": {
-    "otel-revenue-rm": {
-      "command": "uv",
-      "args": ["run", "python", "-m", "mcp_server", "--transport", "stdio"],
-      "env": { "DATABASE_URL": "postgresql://hackathon:hackathon@localhost:5432/hotel_hackathon" }
-    }
-  }
-}
 ```
 
 The agent uses in-process tools by default (so tests and local runs need no server). The

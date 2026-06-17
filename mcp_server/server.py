@@ -29,8 +29,8 @@ SERVER_NAME = MCP_SERVER_NAME
 def build_server() -> FastMCP:
     """Build the FastMCP server from ``ALL_TOOLS``.
 
-    Host and port apply only to the network transports (``streamable-http`` / ``sse``)
-    and are read from the environment; the default ``stdio`` transport ignores them.
+    Host and port apply only to the ``streamable-http`` transport and are read from
+    the environment; the default ``stdio`` transport ignores them.
     """
     fastmcp_tools = [to_fastmcp(tool) for tool in ALL_TOOLS]
     return FastMCP(
@@ -53,7 +53,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Otel Revenue-Manager MCP server")
     parser.add_argument(
         "--transport",
-        choices=["stdio", "streamable-http", "sse"],
+        choices=["stdio", "streamable-http"],
         default=os.environ.get("MCP_TRANSPORT", "stdio"),
         help="MCP transport (default: stdio, for local clients like Claude Desktop)",
     )

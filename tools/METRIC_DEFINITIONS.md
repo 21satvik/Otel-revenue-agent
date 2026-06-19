@@ -5,7 +5,7 @@ make answers correct; the agent never writes SQL, so correctness lives here.
 
 ## Grain: room nights vs stay rows vs reservations
 
-The fact table `reservations_hackathon` has grain **one row per reservation ×
+The fact table `reservations` has grain **one row per reservation ×
 stay_date**. Three different counts come from it and must not be confused:
 
 | Term | Definition | SQL |

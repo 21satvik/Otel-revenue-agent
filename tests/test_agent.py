@@ -1,4 +1,4 @@
-"""Agent wiring tests (Phase 3), AGENT_TEST_SCENARIOS.md.
+"""Agent wiring tests.
 
 Graph introspection + a fake tool-calling model + a recorded trace fixture. No
 live LLM API calls (a fake model is injected), so these run in CI without keys.
@@ -121,7 +121,7 @@ def test_scenario6_memory_configured():
     assert {"read_file", "write_file", "ls"} <= _registered_tool_names(agent)
 
 
-# Scenario 7, refusal policy encoded (bonus)
+# Refusal policy encoded
 def test_scenario7_refusal_policy_in_config():
     """The default-filter policy and refusal stance are encoded in skills + prompt."""
     from agent.prompt import SYSTEM_PROMPT

@@ -5,10 +5,9 @@ anchor date always yields exactly the same database (idempotent + reproducible).
 Lookups load before the fact table to satisfy foreign keys, and one row is
 appended to ``load_manifest`` per run.
 
-``row_hash`` on the manifest is computed the same way as the brief's
-``compute_load_fingerprint.py`` ``reservation_stay_status_sha256`` (sha256 of
-sorted ``reservation_id|stay_date|financial_status`` lines), so the manifest's
-``row_hash`` matches ``LOAD_PROOF.json`` and the ``/health`` endpoint.
+``row_hash`` on the manifest is a content fingerprint of the load (sha256 of sorted
+``reservation_id|stay_date|financial_status`` lines), so a given anchor date always
+produces the same hash and re-runs are verifiably reproducible.
 """
 
 from __future__ import annotations
@@ -84,7 +83,7 @@ def load(
     with psycopg.connect(database_url) as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "truncate public.reservations_hackathon, "
+                "truncate public.reservations, "
                 "public.market_macro_group_history, public.room_type_lookup, "
                 "public.rate_plan_lookup, public.market_code_lookup, "
                 "public.channel_code_lookup restart identity cascade"
@@ -118,7 +117,7 @@ def load(
             # Fact table.
             fact_cols = list(StayRow.model_fields.keys())
             _insert_many(
-                cur, "reservations_hackathon", fact_cols,
+                cur, "reservations", fact_cols,
                 [r.model_dump() for r in stay_rows],
             )
             # Manifest (one row per run).

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Apply the solution's post-schema DDL to the database in DATABASE_URL.
+"""Apply the post-schema DDL to the database in DATABASE_URL.
 
-Runs, in order, after the brief's schema.sql exists (docker compose up / cluster
-init): sql/schema_overrides.sql (the one documented FK relaxation) then
-sql/views.sql (the semantic views). Idempotent: the override uses DROP ... IF
-EXISTS and every view is CREATE OR REPLACE VIEW.
+Runs, in order, after schema.sql exists (docker compose up / cluster init):
+sql/schema_overrides.sql (the one documented FK relaxation) then sql/views.sql
+(the semantic views). Idempotent: the override uses DROP ... IF EXISTS and every
+view is CREATE OR REPLACE VIEW.
 """
 
 from __future__ import annotations

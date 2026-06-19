@@ -5,12 +5,9 @@ Usage (from the repo root, with the DB up and DATABASE_URL set):
     uv run python -m etl.run_etl                 # full scrape + load
     uv run python -m etl.run_etl --limit 50      # smoke run on first 50 reservations
 
-After loading, generate the load proof with the brief's script and reconcile with
-/verify on the same calendar day:
-
-    uv run python scripts/compute_load_fingerprint.py \
-        --database-url $DATABASE_URL \
-        --manifest etl/SCRAPE_MANIFEST.json --output etl/LOAD_PROOF.json
+The run writes ``etl/SCRAPE_MANIFEST.json`` (anchor date, reservation id count + sha256)
+as a provenance record of the load. For a local run with no scrape, seed the demo
+dataset instead: ``uv run python -m scripts.seed_demo``.
 """
 
 from __future__ import annotations

@@ -1,11 +1,11 @@
 """FastAPI gateway: HTTP basic auth, GET /health, POST /chat (SSE streaming).
 
-One controllable service delivers all three deploy requirements:
+One small service delivers the whole surface:
 
-* **Basic auth** on the chat routes (so the public URL can't be spammed). ``/health``
-  is intentionally unauthenticated so the reviewers' automated pre-chat check can read it.
-* **GET /health** returns the four proof fields the reviewers check against the
-  submitted LOAD_PROOF before chatting.
+* **Basic auth** on the chat routes (so a public URL can't be spammed). ``/health``
+  is intentionally unauthenticated so an uptime probe or load balancer can read it.
+* **GET /health** is a lightweight liveness/readiness check: it confirms the database
+  is reachable and reports the loaded dataset's basic shape.
 * **POST /chat** streams the agent's LangGraph events over Server-Sent Events,
   surfacing each tool call and each skill file-read (loading a skill *is* a
   read_file tool call) so the UI can show the agent's work live.
@@ -13,7 +13,6 @@ One controllable service delivers all three deploy requirements:
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import secrets
@@ -31,7 +30,6 @@ from tools.db import query_one
 
 SOLUTION_ROOT = Path(__file__).resolve().parents[1]
 STATIC_DIR = Path(__file__).resolve().parent / "static"
-LOAD_PROOF_PATH = SOLUTION_ROOT / "etl" / "LOAD_PROOF.json"
 
 
 @asynccontextmanager
@@ -68,61 +66,27 @@ def require_auth(credentials: HTTPBasicCredentials = Depends(security)) -> str:
 
 
 # Health
-def _live_fingerprint() -> dict[str, Any]:
-    """Compute the four /health proof fields from the live database."""
-    pair = query_one(
-        """
-        select string_agg(
-                 reservation_id || '|' || stay_date::text || '|' || financial_status,
-                 E'\n' order by reservation_id, stay_date, financial_status
-               ) as payload
-        from public.reservations_hackathon
-        """
-    )
-    payload = (pair.get("payload") or "").encode("utf-8")
-    db_fingerprint = hashlib.sha256(payload).hexdigest()
-
-    manifest = query_one(
-        "select dataset_revision, row_hash from public.load_manifest "
-        "order by load_id desc limit 1"
-    )
-    posted = query_one(
-        """
-        select count(*) as n
-        from public.reservations_hackathon
-        where reservation_status <> 'Cancelled' and financial_status = 'Posted'
-        """
-    )
-    return {
-        "db_fingerprint": db_fingerprint,
-        "dataset_revision": manifest.get("dataset_revision"),
-        "row_hash": manifest.get("row_hash"),
-        "financial_status_posted_only_rows": int(posted.get("n") or 0),
-    }
-
-
 @app.get("/health")
 def health() -> dict[str, Any]:
-    """Return live DB proof fields, plus the committed LOAD_PROOF for comparison.
+    """Liveness/readiness check: confirm the DB is reachable and report dataset shape.
 
-    Unauthenticated by design: it exposes only the published proof fields, and the
-    reviewers call it (without credentials) before chat to confirm the live DB matches.
+    Unauthenticated by design so an uptime probe or load balancer can poll it. Returns
+    the distinct reservation count, the stay-night row count, and the latest loaded
+    dataset revision.
     """
-    live = _live_fingerprint()
-    if LOAD_PROOF_PATH.is_file():
-        proof = json.loads(LOAD_PROOF_PATH.read_text())
-        live["committed_proof"] = {
-            "db_fingerprint": proof.get("reservation_stay_status_sha256"),
-            "dataset_revision": proof.get("dataset_revision"),
-            "row_hash": proof.get("load_manifest_row_hash"),
-            "financial_status_posted_only_rows": proof.get("aggregates", {}).get(
-                "posted_stay_rows"
-            ),
-        }
-        live["matches_committed_proof"] = (
-            live["db_fingerprint"] == live["committed_proof"]["db_fingerprint"]
-        )
-    return live
+    counts = query_one(
+        "select count(distinct reservation_id) as reservations, count(*) as stay_rows "
+        "from public.reservations"
+    )
+    manifest = query_one(
+        "select dataset_revision from public.load_manifest order by load_id desc limit 1"
+    )
+    return {
+        "status": "ok",
+        "reservations": int(counts.get("reservations") or 0),
+        "stay_rows": int(counts.get("stay_rows") or 0),
+        "dataset_revision": (manifest or {}).get("dataset_revision"),
+    }
 
 
 # Chat (SSE)

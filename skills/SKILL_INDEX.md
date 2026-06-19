@@ -1,9 +1,9 @@
 ---
 name: revenue-manager-pack
-description: "Revenue Manager skill pack otel-rm-v2. Index of the on-demand skills the agent loads to answer hotel GM questions about on-the-books revenue, segment mix, booking pace, OTA dependency, group/block concentration, cancellations, and point-in-time snapshots. Load the specific skill whose description matches the question; never query the database directly, always go through the five named tools."
+description: "Revenue Manager skill pack revenue-manager-v2. Index of the on-demand skills the agent loads to answer hotel GM questions about on-the-books revenue, segment mix, booking pace, OTA dependency, group/block concentration, cancellations, and point-in-time snapshots. Load the specific skill whose description matches the question; never query the database directly, always go through the five named tools."
 ---
 
-# Revenue Manager skill pack, `otel-rm-v2`
+# Revenue Manager skill pack, `revenue-manager-v2`
 
 This pack teaches the agent to think like an experienced hotel revenue manager,
 not to read a dashboard aloud. Each skill below is a separate `SKILL.md` loaded on

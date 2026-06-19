@@ -42,7 +42,7 @@ create table if not exists public.load_manifest (
   created_at timestamptz not null default now()
 );
 
-create table if not exists public.reservations_hackathon (
+create table if not exists public.reservations (
   reservation_stay_id bigint generated always as identity primary key,
   reservation_id text not null,
   arrival_date date not null,
@@ -73,19 +73,19 @@ create table if not exists public.reservations_hackathon (
   unique (reservation_id, stay_date)
 );
 
-create index if not exists idx_res_hackathon_stay_date
-  on public.reservations_hackathon(stay_date);
-create index if not exists idx_res_hackathon_property_date
-  on public.reservations_hackathon(property_date);
-create index if not exists idx_res_hackathon_create_datetime
-  on public.reservations_hackathon(create_datetime);
-create index if not exists idx_res_hackathon_market_code
-  on public.reservations_hackathon(market_code);
-create index if not exists idx_res_hackathon_channel_code
-  on public.reservations_hackathon(channel_code);
-create index if not exists idx_res_hackathon_reservation_status
-  on public.reservations_hackathon(reservation_status);
-create index if not exists idx_res_hackathon_financial_status
-  on public.reservations_hackathon(financial_status);
+create index if not exists idx_reservations_stay_date
+  on public.reservations(stay_date);
+create index if not exists idx_reservations_property_date
+  on public.reservations(property_date);
+create index if not exists idx_reservations_create_datetime
+  on public.reservations(create_datetime);
+create index if not exists idx_reservations_market_code
+  on public.reservations(market_code);
+create index if not exists idx_reservations_channel_code
+  on public.reservations(channel_code);
+create index if not exists idx_reservations_reservation_status
+  on public.reservations(reservation_status);
+create index if not exists idx_reservations_financial_status
+  on public.reservations(financial_status);
 create index if not exists idx_market_macro_history_dates
   on public.market_macro_group_history(market_code, valid_from, valid_to);

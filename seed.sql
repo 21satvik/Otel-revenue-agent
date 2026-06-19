@@ -1,2 +1,3 @@
--- Intentionally empty. The challenge dataset is loaded via your ETL pipeline,
--- not from a seed file. This file exists so docker compose init succeeds.
+-- Intentionally empty. Data is loaded by the ETL pipeline (etl/run_etl.py) or, for a
+-- self-contained local run, by scripts/seed_demo.py, not from a seed file. This file
+-- exists so docker compose init succeeds.

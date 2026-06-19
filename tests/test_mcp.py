@@ -1,4 +1,4 @@
-"""MCP server tests, the MCP bonus surface (``mcp_server``).
+"""MCP server tests for the ``mcp_server`` surface.
 
 These tests use the in-memory transport: the server object is wired straight to a client
 session, with no subprocess and no network. The coroutines are driven with ``asyncio.run``

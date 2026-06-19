@@ -20,7 +20,7 @@ from typing import Any
 import psycopg
 from psycopg.rows import dict_row
 
-DEFAULT_DATABASE_URL = "postgresql://hackathon:hackathon@localhost:5432/hotel_hackathon"
+DEFAULT_DATABASE_URL = "postgresql://revenue:revenue@localhost:5432/hotel_revenue"
 
 
 def database_url() -> str:

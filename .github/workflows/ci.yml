@@ -13,15 +13,15 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: hackathon
-          POSTGRES_PASSWORD: hackathon
-          POSTGRES_DB: hotel_hackathon
+          POSTGRES_USER: revenue
+          POSTGRES_PASSWORD: revenue
+          POSTGRES_DB: hotel_revenue
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U hackathon -d hotel_hackathon"
+          --health-cmd "pg_isready -U revenue -d hotel_revenue"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      DATABASE_URL: postgresql://hackathon:hackathon@localhost:5432/hotel_hackathon
+      DATABASE_URL: postgresql://revenue:revenue@localhost:5432/hotel_revenue
     steps:
       - uses: actions/checkout@v5
 
@@ -37,7 +37,7 @@ jobs:
         run: |
           uv run python - <<'PY'
           import psycopg, pathlib
-          url = "postgresql://hackathon:hackathon@localhost:5432/hotel_hackathon"
+          url = "postgresql://revenue:revenue@localhost:5432/hotel_revenue"
           schema = pathlib.Path("schema.sql").read_text()
           overrides = pathlib.Path("sql/schema_overrides.sql").read_text()
           views = pathlib.Path("sql/views.sql").read_text()

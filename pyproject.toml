@@ -1,7 +1,7 @@
 [project]
-name = "otel-revenue-agent"
+name = "revenue-manager-agent"
 version = "0.1.0"
-description = "Revenue Manager Agent for a hotel GM, Otel AI build challenge solution"
+description = "An AI Revenue Manager agent for a hotel GM: a Deep Agent over a Postgres reservation book, with skills, an MCP tool server, and a streaming chat UI"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -35,10 +35,6 @@ markers = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-# The brief lives in-tree as read-only reference; never lint or format it.
-# compute_load_fingerprint.py is vendored verbatim from the brief, keep it
-# byte-identical (it is the official proof script), so exclude it from lint too.
-extend-exclude = ["otel-build-challenge", "scripts/compute_load_fingerprint.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

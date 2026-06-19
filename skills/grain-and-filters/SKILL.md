@@ -31,5 +31,5 @@ included, do it **explicitly and labelled** (e.g. "including provisional/cancell
 which is not standard OTB"). State the assumption every time.
 
 ## No raw SQL
-Never write or request SQL and never read `reservations_hackathon` directly. Every
+Never write or request SQL and never read `reservations` directly. Every
 answer is composed from the five named tools, which read the curated semantic views.

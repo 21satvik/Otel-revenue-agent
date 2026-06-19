@@ -1,4 +1,4 @@
-"""Skill-pack structural tests (Phase 3), SKILL_TEST_SCENARIOS.md.
+"""Skill-pack structural tests.
 
 Pure filesystem checks of the skill pack: no LLM calls. Validates pack version,
 counts, judgment depth (numeric threshold + recommended action), tool routing,
@@ -79,14 +79,14 @@ def _is_judgment(skill: Skill) -> bool:
     return has_threshold and has_action and skill.body_word_count >= 80
 
 
-# Scenario 1, pack version pin
-def test_scenario1_pack_version():
-    """The challenge skill pins the expected pack version (otel-rm-v2)."""
-    challenge = SKILLS_DIR / "CHALLENGE_SKILL.md"
-    text = challenge.read_text(encoding="utf-8")
-    assert "otel-rm-v2" in text
-    skill = _parse(challenge)
-    assert "otel-rm-v2" in skill.description
+# Pack version pin
+def test_pack_version():
+    """The skill index pins the expected pack version (revenue-manager-v2)."""
+    index_doc = SKILLS_DIR / "SKILL_INDEX.md"
+    text = index_doc.read_text(encoding="utf-8")
+    assert "revenue-manager-v2" in text
+    skill = _parse(index_doc)
+    assert "revenue-manager-v2" in skill.description
 
 
 # Scenario 2, minimum skill count

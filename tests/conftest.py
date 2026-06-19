@@ -30,16 +30,10 @@ def _find_schema() -> Path:
 
 
 def _database_url() -> str:
-    """Return ``DATABASE_URL`` or the default local hackathon connection string."""
+    """Return ``DATABASE_URL`` or the default local revenue connection string."""
     return os.environ.get(
-        "DATABASE_URL", "postgresql://hackathon:hackathon@localhost:5432/hotel_hackathon"
+        "DATABASE_URL", "postgresql://revenue:revenue@localhost:5432/hotel_revenue"
     )
-
-
-# Captured at import, before the ``db`` fixture repoints DATABASE_URL at the
-# ``*_test`` database, so the real-load reconciliation test can still reach the
-# developer's working database.
-_WORKING_DATABASE_URL = _database_url()
 
 
 def _test_database_url() -> str:
@@ -95,7 +89,7 @@ def _load(conn: psycopg.Connection) -> None:
     with conn.cursor() as cur:
         # Clean slate (children first for FK safety).
         cur.execute(
-            "truncate reservations_hackathon, market_macro_group_history, "
+            "truncate reservations, market_macro_group_history, "
             "room_type_lookup, rate_plan_lookup, market_code_lookup, "
             "channel_code_lookup, load_manifest restart identity cascade"
         )
@@ -130,7 +124,7 @@ def _load(conn: psycopg.Connection) -> None:
         placeholders = ", ".join(f"%({c})s" for c in cols)
         collist = ", ".join(cols)
         cur.executemany(
-            f"insert into reservations_hackathon ({collist}) values ({placeholders})",
+            f"insert into reservations ({collist}) values ({placeholders})",
             rows,
         )
         cur.execute(
@@ -162,16 +156,6 @@ def db():
         conn.commit()
         _load(conn)
     return url
-
-
-@pytest.fixture(scope="session")
-def real_db_url() -> str:
-    """The working (non-test) database URL, captured before any test-DB redirect.
-
-    Used by the real-load reconciliation test, which must reach the developer's
-    actual load rather than the synthetic ``*_test`` fixture database.
-    """
-    return _WORKING_DATABASE_URL
 
 
 @pytest.fixture(scope="session")

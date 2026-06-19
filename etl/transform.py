@@ -61,7 +61,7 @@ class Channel(BaseModel):
 
 
 class StayRow(BaseModel):
-    """One reservation × stay_date row of reservations_hackathon."""
+    """One reservation × stay_date row of reservations."""
 
     reservation_id: str
     arrival_date: date

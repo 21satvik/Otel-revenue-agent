@@ -17,23 +17,26 @@ views → 5 typed tools → Deep Agent → FastAPI gateway (SSE) + chat UI`.
   **one row per reservation × stay_date**, coerces types, normalises datetimes to UTC,
   and fails loudly if a reservation's scraped nights ≠ declared `nights`.
 - **Load** (`etl/load.py`): **idempotent truncate-and-reload** in FK order, one
-  `load_manifest` row per run. `row_hash` uses the same recipe as
-  `compute_load_fingerprint.py` so manifest ↔ LOAD_PROOF ↔ `/health` agree.
-- **Verify** (`etl/run_etl.py`): writes `SCRAPE_MANIFEST.json` (anchor_date,
-  reservation_ids_count + sha256); `LOAD_PROOF.json` via the brief's script;
-  reconciled against `/verify` on the scrape day.
+  `load_manifest` row per run. `row_hash` is a content fingerprint of the load (sha256
+  of sorted `reservation_id|stay_date|financial_status` lines), so a given anchor date
+  always yields the same hash and re-runs are verifiably reproducible.
+- **Manifest** (`etl/run_etl.py`): writes `SCRAPE_MANIFEST.json` (anchor_date,
+  reservation_ids_count + sha256) as a provenance record of each load.
+
+For a local run with no scrape, `scripts/seed_demo.py` loads the same tables from a
+deterministic synthetic dataset instead.
 
 ## 2. Database and views
-Postgres runs on the deployment host (local docker-compose for dev). The brief's
-`schema.sql` is kept **byte-identical**; one documented `sql/schema_overrides.sql`
-(applied after schema, before views) relaxes **only** the `rate_plan_code` FK, because
+Postgres (local docker-compose for dev). `schema.sql` defines the schema; one
+documented `sql/schema_overrides.sql` (applied after schema, before views) relaxes
+**only** the `rate_plan_code` FK, because
 the data uses 16 granular rate codes while `rate_plan_lookup` is a fixed 8-row
 dimension, so the two cannot coexist under a strict FK (the other three dimension FKs
 stay enforced).
 `sql/views.sql` sits between tools and raw tables: `vw_stay_night_base` (Posted,
 non-cancelled), `vw_segment_stay_night` (adds stay-date-effective `macro_group`), and a
 supporting `vw_stay_night_posted` (Posted, keeps cancelled) for the toggle / as-of
-paths. Tools never read `reservations_hackathon` directly.
+paths. Tools never read `reservations` directly.
 
 ## 3. Tool layer
 Five tools (`tools/metrics.py`), each reading the semantic views (never the raw fact
@@ -62,8 +65,8 @@ model-improvised SQL. Grain definitions: `tools/METRIC_DEFINITIONS.md`.
 | Planning | built-in `write_todos` decomposes multi-part GM questions |
 | Memory / filesystem | `InMemorySaver` checkpointer + `InMemoryStore` (multi-turn) + virtual filesystem |
 | Human-in-the-loop | `interrupt_on={"get_as_of_otb": True}` (checkpointer required) |
-| Model & prompt | Claude via `MODEL_ID` (default `anthropic:claude-sonnet-4-6`); RM persona, §12 answer style |
-| MCP (bonus) | the same five tools are also published as an MCP server (`mcp_server`); the deployed agent consumes them over MCP (§9) |
+| Model & prompt | Provider-agnostic via `MODEL_ID` (default `anthropic:claude-sonnet-4-6`); RM persona + answer style |
+| MCP | the same five tools are also published as an MCP server (`mcp_server`); the agent can consume them over MCP (§9) |
 
 ## 5. Skill → tool routing matrix
 
@@ -91,36 +94,31 @@ OTB questions load `otb-summary`; pace → `pickup-pace`; mix/OTA → `segment-m
   (numeric threshold + recommended action regex), tool routing, no-SQL, guardrail -
   all without API calls.
 
-## 7. Deployment topology
-Self-hosted on an always-on Linux VM, chosen over a free PaaS tier so the service never
-cold-starts during the review window.
-- **DB:** Postgres on the host, loaded by the ETL.
-- **Agent + UI:** a FastAPI service (`app/server.py`) run by a `systemd` unit (uvicorn),
-  behind `nginx` with HTTPS (Let's Encrypt). `POST /chat` and the chat page are basic-auth
-  gated; the page renders tool/skill chips live over **SSE**, expandable to each tool's
-  inputs, result and latency.
-- **MCP server:** under `RM_TOOL_TRANSPORT=mcp` the tool layer runs as a second `systemd`
-  unit (`otel-mcp.service`, streamable-http on `127.0.0.1`) that the agent consumes (section 9).
-- `GET /health` is unauthenticated so the reviewers' pre-chat check can read it; fields:
-  `db_fingerprint` (= `reservation_stay_status_sha256`), `dataset_revision`, `row_hash`,
-  `financial_status_posted_only_rows`, computed live and compared to committed `LOAD_PROOF.json`.
-- API key and basic-auth credentials live only in the host environment, never in git.
+## 7. Deployment
+The app is a single FastAPI service (`app/server.py`, uvicorn) and runs anywhere that
+can reach Postgres:
+- **DB:** Postgres, loaded by the ETL or `scripts/seed_demo.py`.
+- **Agent + UI:** `POST /chat` and the chat page are basic-auth gated; the page renders
+  tool/skill chips live over **SSE**, expandable to each tool's inputs, result and latency.
+  Behind a reverse proxy, enable HTTPS and disable proxy buffering so SSE streams.
+- **MCP server:** under `RM_TOOL_TRANSPORT=mcp` the tool layer runs as a separate
+  process (streamable-http on `127.0.0.1`) that the agent consumes (section 9).
+- `GET /health` is unauthenticated (so an uptime probe can read it) and reports DB
+  reachability plus the loaded dataset's reservation count, stay-row count, and revision.
+- The model API key and basic-auth credentials come from the environment, never git.
 
-## 8. Out of scope (and why)
-- **A managed PaaS (e.g. Render/Neon free tiers)** would serve the streaming UI with
-  less setup, but those tiers sleep on idle and cold-start, which risks the "live and
-  responsive for ≥7 days" requirement. An always-on self-hosted VM avoids that; the
-  trade-off is owning the nginx/systemd/TLS setup directly.
+## 8. Notes on scope
 - No daily cron: the dataset is anchor-stable within a day, so the ETL is run-on-demand
   and reproducible for a given anchor date.
+- Correctness is owned by the tested tool/view layer rather than the prompt, so swapping
+  the model (`MODEL_ID`) changes tone and reasoning, not the numbers.
 
-## 9. MCP server (bonus)
+## 9. MCP server
 The five tools are also published as a standalone **MCP server** (`mcp_server/`), and the
-deployed agent can consume them over the Model Context Protocol instead of in-process.
-Properties:
+agent can consume them over the Model Context Protocol instead of in-process. Properties:
 - **Reuse:** any MCP client (e.g. Claude Desktop) can call the tools as a separate service.
-- **Credential isolation:** in the MCP deployment only the server reads `DATABASE_URL`; the
-  agent process receives results over the protocol.
+- **Credential isolation:** over MCP only the server reads `DATABASE_URL`; the agent
+  process receives results over the protocol.
 
 The server is generated from `tools.metrics.ALL_TOOLS` via `langchain_mcp_adapters.to_fastmcp`,
 so each metric has one definition (in `tools/metrics.py`); grain, default filters, and the
@@ -130,10 +128,8 @@ unchanged. `mcp_server` serves `stdio` (local clients) or `streamable-http`
 (remote/production), selected by `--transport` / `MCP_TRANSPORT`.
 
 `build_agent()` defaults to the in-process tools, so the structural tests run without a
-server or API key. The deployment sets `RM_TOOL_TRANSPORT=mcp` (and `MCP_SERVER_URL` for
-streamable-http); `load_rm_tools_over_mcp()` loads the five tools and verifies the server's
-surface is exactly the required names before wiring them. `tests/test_mcp.py` checks the
-round-trip over an in-memory transport: the catalog is exactly the five, and a tool called
-over MCP returns the same result as the in-process tool. On the VM the server runs as its
-own `systemd` unit (`otel-mcp.service`, streamable-http on `127.0.0.1`) and the agent
-service connects to it.
+server or API key. Setting `RM_TOOL_TRANSPORT=mcp` (and `MCP_SERVER_URL` for
+streamable-http) switches to the MCP path; `load_rm_tools_over_mcp()` loads the five tools
+and verifies the server's surface is exactly the required names before wiring them.
+`tests/test_mcp.py` checks the round-trip over an in-memory transport: the catalog is
+exactly the five, and a tool called over MCP returns the same result as the in-process tool.

@@ -1,4 +1,4 @@
-"""The five required Revenue-Manager tools (Phase 2).
+"""The five Revenue Manager tools.
 
 Every business rule that makes an answer *correct*, grain, default filters, the
 right date field, the pickup time-zone window, effective macro groups, lives here

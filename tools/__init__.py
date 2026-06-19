@@ -4,4 +4,4 @@ Holds the canonical MCP service name so both the server (which declares it) and 
 agent's MCP client (which connects to it) depend on the core, not on each other.
 """
 
-MCP_SERVER_NAME = "otel-revenue-rm"
+MCP_SERVER_NAME = "revenue-manager-rm"

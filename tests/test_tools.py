@@ -1,4 +1,4 @@
-"""Tool-layer property tests (Phase 2), TOOL_TEST_SCENARIOS.md scenarios 1-6, 8-12.
+"""Tool-layer property tests.
 
 Run against the loaded fixture database (``db`` fixture). Tools are exercised
 through their real LangChain interface (``.invoke``) so registration, schema, and
@@ -114,7 +114,7 @@ def test_scenario8_provisional_excluded(db):
     # Raw count with ONLY cancelled excluded (provisional still in), should be larger.
     with psycopg.connect(db) as conn, conn.cursor() as cur:
         cur.execute(
-            "select count(*) from reservations_hackathon "
+            "select count(*) from reservations "
             "where stay_date >= '2025-08-01' and stay_date < '2025-09-01' "
             "and reservation_status <> 'Cancelled'"
         )
@@ -145,7 +145,7 @@ def test_scenario10_filters_on_stay_date_not_property_date(db):
     # August summary (stay_date grain), proving we filter on stay_date.
     with psycopg.connect(db) as conn, conn.cursor() as cur:
         cur.execute(
-            "select count(*) from reservations_hackathon "
+            "select count(*) from reservations "
             "where property_date <> stay_date"
         )
         mismatch = cur.fetchone()[0]
